@@ -281,7 +281,7 @@
       ).join("");
     }
 
-// ================= DAFTAR FINGERPRINT =================
+    // ================= DAFTAR FINGERPRINT =================
     document.getElementById("daftarBtn").addEventListener("click", async () => {
       const identitas = document.getElementById("daftarInput").value.trim();
       const btn = document.getElementById("daftarBtn");
@@ -324,11 +324,8 @@
             authenticatorSelection: {
               authenticatorAttachment: "platform", // Wajibkan sensor internal HP
               userVerification: "required",
-              residentKey: "discouraged",          // Matikan penyimpaan passkey browser
-              requireResidentKey: false
+              residentKey: "preferred"             // Mengizinkan penyimpanan kredensial lokal di HP
             },
-            hints: ["client-device"],
-            attestation: "none",
             timeout: 60000
           }
         });
@@ -389,10 +386,6 @@
           publicKey: {
             challenge: challenge,
             userVerification: "required",
-            authenticatorSelection: {
-              authenticatorAttachment: "platform" // Wajibkan sensor internal perangkat
-            },
-            hints: ["client-device"],
             timeout: 60000
           }
         });
