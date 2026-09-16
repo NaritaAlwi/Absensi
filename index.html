@@ -389,6 +389,9 @@
           publicKey: {
             challenge: challenge,
             userVerification: "required",
+            authenticatorSelection: {
+              authenticatorAttachment: "platform" // Wajibkan sensor internal perangkat
+            },
             hints: ["client-device"],
             timeout: 60000
           }
@@ -425,7 +428,6 @@
         btn.textContent = "Tekan untuk Absen";
       }
     });
-
     // ================= KIRIM JSONP =================
     function kirimJSONP(aksi, data, callback) {
       const payload = Object.assign({}, data, { aksi: aksi, timestamp: new Date().toISOString() });
