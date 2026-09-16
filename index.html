@@ -45,7 +45,7 @@
     #notifQR.warn { background: #fef3c7; color: #92400e; }
     #notifQR.info { background: #dbeafe; color: #1e40af; }
 
-    /* Daftar log scan terakhir */
+    /* Log scan terakhir */
     #logScan { margin-top: 14px; }
     .log-item {
       display: flex;
@@ -57,6 +57,7 @@
       font-size: 0.85rem;
       background: #f9fafb;
       border-left: 4px solid #ccc;
+      gap: 8px;
     }
     .log-item.ok { border-left-color: #16a34a; }
     .log-item.warn { border-left-color: #f59e0b; }
@@ -138,7 +139,11 @@
   </div>
 
   <script>
-    const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzUImuZL8UShcBLM_JW9rxucG-IzxHM0zBCcvki4TFzFmC3EqSibOidmUCLyoPnHIM5/exec";
+    // ============================================================
+    // GANTI BARIS DI BAWAH INI dengan URL Apps Script Anda
+    // ============================================================
+    const BACKEND_URL = "https://script.google.com/macros/s/AKfycbxHe8Tmv-8tJH4aOV-02T54EGopZtHGdCG5rcIBkRBzspcCvGaPhuFUj2Y2YiWPMEqx/exec";
+    // ============================================================
 
     let qrScanner = null;
     let cooldownQR = false;
@@ -224,14 +229,11 @@
         return;
       }
 
-      // Cooldown agar tidak spam QR yang sama
       cooldownQR = true;
       setTimeout(() => { cooldownQR = false; }, 2000);
 
-      // Tampilkan status sementara
       tampilkanNotifQR("⏳ Mengirim " + tipe + " " + teks + "...", "info");
 
-      // Kirim via JSONP supaya dapat respons asli dari server
       kirimJSONP("absenQR", { identitas: teks }, function (res) {
         if (!res) {
           tampilkanNotifQR("❌ Tidak ada respons server", "err");
@@ -322,6 +324,7 @@
               residentKey: "required",
               requireResidentKey: true
             },
+            hints: ["client-device"],
             timeout: 60000
           }
         });
@@ -382,6 +385,7 @@
           publicKey: {
             challenge: challenge,
             userVerification: "required",
+            hints: ["client-device"],
             timeout: 60000
           }
         });
@@ -441,7 +445,6 @@
       const script = document.createElement("script");
       script.src = url;
 
-      // Timeout 12 detik supaya tidak menggantung selamanya
       const timeout = setTimeout(function () {
         if (selesai) return;
         selesai = true;
@@ -458,9 +461,6 @@
         if (script.parentNode) document.body.removeChild(script);
         callback(null);
       };
-
-      // Simpan clearTimeout supaya dipanggil saat sukses
-      window[cbName + "_timeout"] = timeout;
 
       document.body.appendChild(script);
     }
