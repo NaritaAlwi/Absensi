@@ -10,119 +10,218 @@
     body { font-family: -apple-system, sans-serif; background: #f5f5f5; min-height: 100vh; padding: 16px; }
     .card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
     h1 { font-size: 1.4rem; margin-bottom: 4px; }
-    .sub { color: #666; font-size: 0.85rem; margin-bottom: 16px; }
-    #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-top: 12px; }
+    .sub { color: #666; font-size: 0.85rem; margin-bottom: 8px; }
     .btn { display: block; width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 12px; }
     .btn-primary { background: #2563eb; color: #fff; }
     .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
-    .btn-success { background: #16a34a; color: #fff; }
+    .btn-secondary { background: #fff; color: #2563eb; border: 2px solid #2563eb; }
+    .btn-back { background: #e5e7eb; color: #374151; }
+    .btn-green { background: #16a34a; color: #fff; }
+    #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-top: 12px; }
+    label { display: block; font-size: 0.9rem; color: #444; margin: 14px 0 6px; font-weight: 500; }
+    input[type="text"] { width: 100%; padding: 14px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem; text-align: center; letter-spacing: 1px; }
     #status { text-align: center; padding: 14px; border-radius: 10px; margin-top: 12px; font-size: 0.95rem; display: none; line-height: 1.4; }
     .status-ok { background: #dcfce7; color: #166534; }
     .status-err { background: #fee2e2; color: #991b1b; }
     .status-warn { background: #fef3c7; color: #92400e; }
     .status-info { background: #dbeafe; color: #1e40af; }
     .hidden { display: none; }
-    .step { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-    .step-num { width: 28px; height: 28px; border-radius: 50%; background: #e5e7eb; color: #666; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; }
-    .step.active .step-num { background: #2563eb; color: #fff; }
-    .step.done .step-num { background: #16a34a; color: #fff; }
-    .finger-icon { font-size: 48px; text-align: center; margin: 16px 0; }
-    .info-box { background: #f3f4f6; border-radius: 10px; padding: 12px; margin-top: 10px; font-size: 0.9rem; }
-    .info-box strong { color: #111; }
+    .finger-icon { font-size: 64px; text-align: center; margin: 16px 0; }
+    .menu-icon { font-size: 40px; display: block; margin-bottom: 8px; }
+    .menu-btn { text-align: center; padding: 24px 16px; cursor: pointer; }
+    .row2 { display: flex; gap: 10px; }
+    .row2 .btn { flex: 1; }
   </style>
 </head>
 <body>
 
-  <div class="card">
-    <h1>📷 Absensi Online</h1>
-    <p class="sub">Scan QR (NISN 10 digit / NIP 18 digit) + Sidik Jari</p>
-
-    <div class="step active" id="step1">
-      <div class="step-num">1</div>
-      <span>Arahkan kamera ke QR Code</span>
+  <!-- ============ MENU UTAMA ============ -->
+  <div id="menuPage">
+    <div class="card">
+      <h1>📋 Absensi Online</h1>
+      <p class="sub">Pilih metode absensi</p>
     </div>
 
-    <div id="reader"></div>
-    <div id="scanResult" style="margin-top: 8px; font-size: 0.85rem; color: #666;"></div>
-  </div>
-
-  <div class="card hidden" id="fingerCard">
-    <div class="step active" id="step2">
-      <div class="step-num">2</div>
-      <span>Verifikasi Sidik Jari</span>
+    <div class="card menu-btn" onclick="bukaQR()">
+      <span class="menu-icon">📷</span>
+      <strong>Absen dengan QR Code</strong>
+      <p class="sub" style="margin-top:6px;">Scan QR berisi NISN / NIP</p>
     </div>
-    <div class="finger-icon">🖐️</div>
-    <button class="btn btn-primary" id="fingerBtn">Tekan untuk Verifikasi Sidik Jari</button>
+
+    <div class="card menu-btn" onclick="bukaMenuFingerprint()">
+      <span class="menu-icon">🖐️</span>
+      <strong>Absen dengan Sidik Jari</strong>
+      <p class="sub" style="margin-top:6px;">Tanpa perlu ketik NISN / NIP</p>
+    </div>
+
+    <div id="statusMenu"></div>
   </div>
 
-  <div class="card hidden" id="submitCard">
-    <div class="info-box" id="infoBox"></div>
-    <button class="btn btn-success" id="submitBtn">Kirim Absensi</button>
+  <!-- ============ HALAMAN QR ============ -->
+  <div id="qrPage" class="hidden">
+    <div class="card">
+      <h1>📷 Absen via QR</h1>
+      <p class="sub">Arahkan kamera ke QR Code NISN / NIP</p>
+      <div id="reader"></div>
+    </div>
+    <button class="btn btn-back" onclick="kembaliKeMenu()">← Kembali</button>
+    <div id="statusQR"></div>
   </div>
 
-  <div id="status"></div>
+  <!-- ============ SUB-MENU FINGERPRINT ============ -->
+  <div id="fingerMenuPage" class="hidden">
+    <div class="card">
+      <h1>🖐️ Menu Sidik Jari</h1>
+      <p class="sub">Pilih tindakan</p>
+
+      <button class="btn btn-secondary" onclick="bukaDaftarFinger()">
+        📝 Daftarkan Sidik Jari
+      </button>
+      <button class="btn btn-primary" onclick="bukaAbsenFinger()">
+        ✅ Absen Sidik Jari
+      </button>
+    </div>
+    <button class="btn btn-back" onclick="kembaliKeMenu()">← Kembali</button>
+  </div>
+
+  <!-- ============ HALAMAN DAFTAR FINGERPRINT ============ -->
+  <div id="daftarPage" class="hidden">
+    <div class="card">
+      <h1>📝 Daftarkan Sidik Jari</h1>
+      <p class="sub">Masukkan NISN / NIP sekali saja, lalu tempel sidik jari</p>
+
+      <label for="daftarInput">NISN (10 digit) atau NIP (18 digit)</label>
+      <input type="text" id="daftarInput" inputmode="numeric" placeholder="Masukkan angka" autocomplete="off">
+
+      <div class="finger-icon">🖐️</div>
+      <button class="btn btn-green" id="daftarBtn">Daftarkan Sidik Jari Sekarang</button>
+    </div>
+    <button class="btn btn-back" onclick="kembaliKeMenuFinger()">← Kembali</button>
+    <div id="statusDaftar"></div>
+  </div>
+
+  <!-- ============ HALAMAN ABSEN FINGERPRINT ============ -->
+  <div id="absenFingerPage" class="hidden">
+    <div class="card">
+      <h1>✅ Absen Sidik Jari</h1>
+      <p class="sub">Tempel sidik jari Anda di sensor HP</p>
+
+      <div class="finger-icon">🖐️</div>
+      <button class="btn btn-primary" id="absenFingerBtn">Tekan untuk Absen</button>
+    </div>
+    <button class="btn btn-back" onclick="kembaliKeMenuFinger()">← Kembali</button>
+    <div id="statusAbsenFinger"></div>
+  </div>
 
   <script>
-    // ==== GANTI DENGAN URL APPS SCRIPT ANDA ====
-    const BACKEND_URL = "https://script.google.com/macros/s/AKfycbxN0za_LzYPHrzcQvncOK7BfXkZv0Jr8nf7Z8p8nKqd9nBcnsXmeIpeZLWPfwbwiVTc/exec";
+    const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzzj6CkD3HpjLoeUT6UfySrfgyA8_1ul5XeoMh4NxfONLja34BKwmZ3qSB4JhaTkKPQ/exec";
 
-    let currentIdentitas = "";
-    let currentTipe = "";
-    let fingerprintVerified = false;
+    let qrScanner = null;
+    let scanTerkirim = false;
 
-    // ==== Scanner QR ====
-    const qrScanner = new Html5QrcodeScanner(
-      "reader",
-      { fps: 10, qrbox: { width: 250, height: 250 }, rememberLastUsedCamera: true },
-      false
-    );
+    // ================= NAVIGASI =================
+    function sembunyikanSemua() {
+      ["menuPage","qrPage","fingerMenuPage","daftarPage","absenFingerPage"].forEach(id => {
+        document.getElementById(id).classList.add("hidden");
+      });
+    }
+    function tampilkan(id) {
+      sembunyikanSemua();
+      document.getElementById(id).classList.remove("hidden");
+    }
+    function bersihkanStatus(ids) {
+      ids.forEach(id => document.getElementById(id).style.display = "none");
+    }
 
-    qrScanner.render(onScanSuccess, onScanError);
+    function kembaliKeMenu() {
+      hentikanScanner();
+      bersihkanStatus(["statusQR","statusFinger","statusMenu","statusDaftar","statusAbsenFinger"]);
+      tampilkan("menuPage");
+    }
+    function kembaliKeMenuFinger() {
+      bersihkanStatus(["statusDaftar","statusAbsenFinger"]);
+      tampilkan("fingerMenuPage");
+    }
+
+    function bukaQR() {
+      tampilkan("qrPage");
+      scanTerkirim = false;
+      mulaiScanner();
+    }
+
+    function bukaMenuFingerprint() {
+      tampilkan("fingerMenuPage");
+      bersihkanStatus(["statusDaftar","statusAbsenFinger"]);
+    }
+
+    function bukaDaftarFinger() {
+      tampilkan("daftarPage");
+      document.getElementById("daftarInput").value = "";
+      bersihkanStatus(["statusDaftar"]);
+    }
+
+    function bukaAbsenFinger() {
+      tampilkan("absenFingerPage");
+      bersihkanStatus(["statusAbsenFinger"]);
+    }
+
+    // ================= QR SCANNER =================
+    function mulaiScanner() {
+      if (qrScanner) {
+        qrScanner.clear().catch(() => {});
+        qrScanner = null;
+      }
+      qrScanner = new Html5QrcodeScanner(
+        "reader",
+        { fps: 10, qrbox: { width: 250, height: 250 }, rememberLastUsedCamera: true },
+        false
+      );
+      qrScanner.render(onScanSuccess, () => {});
+    }
+
+    function hentikanScanner() {
+      if (qrScanner) {
+        qrScanner.clear().catch(() => {});
+        qrScanner = null;
+      }
+    }
 
     function onScanSuccess(decodedText) {
+      if (scanTerkirim) return;
       const teks = decodedText.trim();
 
-      // ==== Validasi format NISN / NIP ====
-      let tipe = null;
-      if (/^\d{10}$/.test(teks)) {
-        tipe = "Siswa";
-      } else if (/^\d{18}$/.test(teks)) {
-        tipe = "Guru";
-      } else {
-        showStatus(
-          "❌ QR tidak valid: <strong>" + teks + "</strong><br>" +
-          "NISN harus 10 digit angka, NIP harus 18 digit angka.<br>" +
-          "Silakan scan ulang.",
-          "err"
-        );
-        return; // Jangan lanjut, tunggu scan berikutnya
+      // Validasi cepat di sisi klien
+      if (!(/^\d{10}$/.test(teks) || /^\d{18}$/.test(teks))) {
+        tampilkanStatus("statusQR",
+          "❌ QR tidak valid: <strong>" + teks + "</strong><br>NISN 10 digit / NIP 18 digit.",
+          "err");
+        return;
       }
 
-      // QR valid
-      currentIdentitas = teks;
-      currentTipe = tipe;
+      scanTerkirim = true;
+      tampilkanStatus("statusQR", "⏳ Mengirim absensi...", "info");
 
-      document.getElementById("scanResult").innerHTML =
-        "✅ Terdeteksi: <strong>" + teks + "</strong> (" + tipe + ")";
-
-      qrScanner.clear().catch(() => {});
-
-      document.getElementById("step1").classList.remove("active");
-      document.getElementById("step1").classList.add("done");
-      document.getElementById("fingerCard").classList.remove("hidden");
-
-      document.getElementById("infoBox").innerHTML =
-        "Identitas: <strong>" + teks + "</strong><br>" +
-        "Tipe: <strong>" + tipe + "</strong>";
+      kirimKeBackend("absenQR", { identitas: teks }, "statusQR", function (sukses) {
+        if (sukses) {
+          hentikanScanner();
+          setTimeout(kembaliKeMenu, 2000);
+        } else {
+          scanTerkirim = false;
+        }
+      });
     }
 
-    function onScanError(err) {
-      // abaikan noise
-    }
+    // ================= DAFTAR SIDIK JARI =================
+    document.getElementById("daftarBtn").addEventListener("click", async () => {
+      const identitas = document.getElementById("daftarInput").value.trim();
+      const btn = document.getElementById("daftarBtn");
 
-    // ==== Sidik Jari ====
-    document.getElementById("fingerBtn").addEventListener("click", async () => {
-      const btn = document.getElementById("fingerBtn");
+      if (!(/^\d{10}$/.test(identitas) || /^\d{18}$/.test(identitas))) {
+        tampilkanStatus("statusDaftar",
+          "❌ NISN harus 10 digit, NIP harus 18 digit.", "err");
+        return;
+      }
+
       btn.disabled = true;
       btn.textContent = "Menunggu sidik jari...";
 
@@ -131,81 +230,147 @@
           .isUserVerifyingPlatformAuthenticatorAvailable();
 
         if (!tersedia) {
-          showStatus("HP ini tidak mendukung sidik jari. Lanjut tanpa verifikasi.", "info");
-          fingerprintVerified = false;
-          proceedToSubmit();
+          tampilkanStatus("statusDaftar",
+            "❌ HP ini tidak punya sensor sidik jari.", "err");
+          btn.disabled = false;
+          btn.textContent = "Daftarkan Sidik Jari Sekarang";
           return;
         }
 
         const challenge = new Uint8Array(32);
         crypto.getRandomValues(challenge);
 
-        await navigator.credentials.create({
+        const credential = await navigator.credentials.create({
           publicKey: {
             challenge: challenge,
             rp: { name: "Absensi Online" },
             user: {
-              id: new TextEncoder().encode(currentIdentitas || "user-" + Date.now()),
-              name: currentIdentitas || "user@example.com",
-              displayName: currentIdentitas || "User"
+              id: new TextEncoder().encode(identitas),
+              name: identitas,
+              displayName: identitas
             },
             pubKeyCredParams: [{ alg: -7, type: "public-key" }],
             authenticatorSelection: {
               authenticatorAttachment: "platform",
-              userVerification: "required"
+              userVerification: "required",
+              residentKey: "required",
+              requireResidentKey: true
             },
-            timeout: 30000
+            timeout: 60000
           }
         });
 
-        fingerprintVerified = true;
-        showStatus("✅ Sidik jari terverifikasi", "ok");
-        proceedToSubmit();
+        // Ambil credential ID dalam bentuk base64url
+        const credId = credential.id;
+
+        tampilkanStatus("statusDaftar", "⏳ Menyimpan ke server...", "info");
+
+        kirimKeBackend("daftar", {
+          identitas: identitas,
+          credentialId: credId
+        }, "statusDaftar", function (sukses) {
+          btn.disabled = false;
+          btn.textContent = "Daftarkan Sidik Jari Sekarang";
+          if (sukses) {
+            setTimeout(kembaliKeMenuFinger, 2500);
+          }
+        });
 
       } catch (err) {
         console.error(err);
-        if (err.name === "NotAllowedError") {
-          showStatus("Verifikasi dibatalkan. Coba lagi.", "err");
-          btn.disabled = false;
-          btn.textContent = "Tekan untuk Verifikasi Sidik Jari";
-        } else {
-          showStatus("Gagal: " + err.message + ". Lanjut tanpa sidik jari.", "info");
-          fingerprintVerified = false;
-          proceedToSubmit();
-        }
+        let pesan = "Gagal: " + err.message;
+        if (err.name === "NotAllowedError") pesan = "Pendaftaran dibatalkan.";
+        if (err.name === "InvalidStateError") pesan = "Sidik jari ini sudah terdaftar di HP ini.";
+        tampilkanStatus("statusDaftar", "❌ " + pesan, "err");
+        btn.disabled = false;
+        btn.textContent = "Daftarkan Sidik Jari Sekarang";
       }
     });
 
-    function proceedToSubmit() {
-      document.getElementById("step2").classList.remove("active");
-      document.getElementById("step2").classList.add("done");
-      document.getElementById("fingerBtn").classList.add("hidden");
-      document.getElementById("submitCard").classList.remove("hidden");
-    }
-
-    // ==== Kirim ke Backend via JSONP ====
-    document.getElementById("submitBtn").addEventListener("click", () => {
-      const btn = document.getElementById("submitBtn");
+    // ================= ABSEN SIDIK JARI =================
+    document.getElementById("absenFingerBtn").addEventListener("click", async () => {
+      const btn = document.getElementById("absenFingerBtn");
       btn.disabled = true;
-      btn.textContent = "Mengirim...";
+      btn.textContent = "Menunggu sidik jari...";
 
-      const payload = {
-        identitas: currentIdentitas,
-        fingerprintVerified: fingerprintVerified,
-        timestamp: new Date().toISOString()
-      };
+      try {
+        const tersedia = await PublicKeyCredential
+          .isUserVerifyingPlatformAuthenticatorAvailable();
 
-      // JSONP: Apps Script tidak bisa kirim header CORS,
-      // jadi kita kirim sebagai parameter GET + callback
-      const callbackName = "absensiCallback_" + Date.now();
-      window[callbackName] = function (response) {
+        if (!tersedia) {
+          tampilkanStatus("statusAbsenFinger",
+            "❌ HP ini tidak punya sensor sidik jari. Gunakan QR.", "err");
+          btn.disabled = false;
+          btn.textContent = "Tekan untuk Absen";
+          return;
+        }
+
+        const challenge = new Uint8Array(32);
+        crypto.getRandomValues(challenge);
+
+        // Panggil kredensial yang sudah tersimpan di HP
+        const assertion = await navigator.credentials.get({
+          publicKey: {
+            challenge: challenge,
+            userVerification: "required",
+            timeout: 60000
+          }
+        });
+
+        const credId = assertion.id;
+
+        tampilkanStatus("statusAbsenFinger", "⏳ Memverifikasi...", "info");
+
+        kirimKeBackend("absenFinger", {
+          credentialId: credId
+        }, "statusAbsenFinger", function (sukses) {
+          btn.disabled = false;
+          btn.textContent = "Tekan untuk Absen";
+          if (sukses) {
+            setTimeout(kembaliKeMenuFinger, 2500);
+          }
+        });
+
+      } catch (err) {
+        console.error(err);
+        let pesan = "Gagal: " + err.message;
+        if (err.name === "NotAllowedError") pesan = "Absen dibatalkan atau sidik jari tidak cocok.";
+        tampilkanStatus("statusAbsenFinger", "❌ " + pesan, "err");
+        btn.disabled = false;
+        btn.textContent = "Tekan untuk Absen";
+      }
+    });
+
+    // ================= KIRIM KE BACKEND (JSONP) =================
+    function kirimKeBackend(aksi, data, statusId, onDone) {
+      const payload = Object.assign({}, data, { aksi: aksi, timestamp: new Date().toISOString() });
+      const callbackName = "cb_" + Date.now() + "_" + Math.floor(Math.random()*1000);
+
+      window[callbackName] = function (res) {
         delete window[callbackName];
-        document.body.removeChild(script);
-        handleBackendResponse(response);
+        if (script.parentNode) document.body.removeChild(script);
+
+        if (!res) {
+          tampilkanStatus(statusId, "❌ Respons server tidak dikenal.", "err");
+          onDone(false);
+          return;
+        }
+
+        if (res.status === "sukses") {
+          tampilkanStatus(statusId, "✅ " + res.pesan, "ok");
+          onDone(true);
+        } else if (res.status === "duplikat") {
+          tampilkanStatus(statusId, "⚠️ " + res.pesan, "warn");
+          onDone(true);
+        } else {
+          tampilkanStatus(statusId, "❌ " + res.pesan, "err");
+          onDone(false);
+        }
       };
 
       const url = BACKEND_URL +
-        "?callback=" + callbackName +
+        "?callback=" + encodeURIComponent(callbackName) +
+        "&aksi=" + encodeURIComponent(aksi) +
         "&data=" + encodeURIComponent(JSON.stringify(payload));
 
       const script = document.createElement("script");
@@ -213,37 +378,14 @@
       script.onerror = function () {
         delete window[callbackName];
         if (script.parentNode) document.body.removeChild(script);
-        showStatus("❌ Tidak bisa menghubungi server. Cek koneksi internet.", "err");
-        btn.disabled = false;
-        btn.textContent = "Coba Lagi";
+        tampilkanStatus(statusId, "❌ Tidak bisa menghubungi server. Cek internet.", "err");
+        onDone(false);
       };
       document.body.appendChild(script);
-    });
-
-    function handleBackendResponse(res) {
-      const btn = document.getElementById("submitBtn");
-      if (!res) {
-        showStatus("❌ Respons server tidak dikenal.", "err");
-        btn.disabled = false;
-        btn.textContent = "Coba Lagi";
-        return;
-      }
-
-      if (res.status === "sukses") {
-        showStatus("✅ " + res.pesan, "ok");
-        btn.textContent = "Terkirim";
-      } else if (res.status === "duplikat") {
-        showStatus("⚠️ " + res.pesan, "warn");
-        btn.textContent = "Sudah Absen Hari Ini";
-      } else {
-        showStatus("❌ " + res.pesan, "err");
-        btn.disabled = false;
-        btn.textContent = "Coba Lagi";
-      }
     }
 
-    function showStatus(pesan, jenis) {
-      const el = document.getElementById("status");
+    function tampilkanStatus(id, pesan, jenis) {
+      const el = document.getElementById(id);
       el.innerHTML = pesan;
       el.className = "status-" + jenis;
       el.style.display = "block";
