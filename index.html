@@ -20,7 +20,7 @@
     #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-top: 12px; }
     label { display: block; font-size: 0.9rem; color: #444; margin: 14px 0 6px; font-weight: 500; }
     input[type="text"] { width: 100%; padding: 14px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem; text-align: center; letter-spacing: 1px; }
-    #status { text-align: center; padding: 14px; border-radius: 10px; margin-top: 12px; font-size: 0.95rem; display: none; line-height: 1.4; }
+    .status { text-align: center; padding: 14px; border-radius: 10px; margin-top: 12px; font-size: 0.95rem; display: none; line-height: 1.4; }
     .status-ok { background: #dcfce7; color: #166534; }
     .status-err { background: #fee2e2; color: #991b1b; }
     .status-warn { background: #fef3c7; color: #92400e; }
@@ -30,7 +30,7 @@
     .menu-icon { font-size: 40px; display: block; margin-bottom: 8px; }
     .menu-btn { text-align: center; padding: 24px 16px; cursor: pointer; }
 
-    /* Notifikasi overlay di dalam halaman QR */
+    /* Notifikasi QR */
     #notifQR {
       margin-top: 10px;
       padding: 12px 14px;
@@ -39,11 +39,31 @@
       text-align: center;
       display: none;
       font-weight: 600;
-      transition: opacity 0.3s;
     }
     #notifQR.ok { background: #dcfce7; color: #166534; }
     #notifQR.err { background: #fee2e2; color: #991b1b; }
+    #notifQR.warn { background: #fef3c7; color: #92400e; }
     #notifQR.info { background: #dbeafe; color: #1e40af; }
+
+    /* Daftar log scan terakhir */
+    #logScan { margin-top: 14px; }
+    .log-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 0.85rem;
+      background: #f9fafb;
+      border-left: 4px solid #ccc;
+    }
+    .log-item.ok { border-left-color: #16a34a; }
+    .log-item.warn { border-left-color: #f59e0b; }
+    .log-item.err { border-left-color: #dc2626; }
+    .log-item.info { border-left-color: #2563eb; }
+    .log-item .id { font-family: monospace; font-weight: 600; }
+    .log-item .time { color: #999; font-size: 0.75rem; }
   </style>
 </head>
 <body>
@@ -68,13 +88,14 @@
     </div>
   </div>
 
-  <!-- ============ HALAMAN QR (kamera tetap terbuka) ============ -->
+  <!-- ============ HALAMAN QR ============ -->
   <div id="qrPage" class="hidden">
     <div class="card">
       <h1>📷 Absen via QR</h1>
-      <p class="sub">Arahkan kamera ke QR Code. Kamera tetap terbuka untuk scan berikutnya.</p>
+      <p class="sub">Kamera tetap terbuka. Scan orang berikutnya kapan saja.</p>
       <div id="reader"></div>
       <div id="notifQR"></div>
+      <div id="logScan"></div>
     </div>
     <button class="btn btn-back" onclick="kembaliKeMenu()">← Kembali</button>
   </div>
@@ -101,7 +122,7 @@
       <button class="btn btn-green" id="daftarBtn">Daftarkan Sidik Jari Sekarang</button>
     </div>
     <button class="btn btn-back" onclick="kembaliKeMenuFinger()">← Kembali</button>
-    <div id="statusDaftar" class="hidden"></div>
+    <div id="statusDaftar" class="status"></div>
   </div>
 
   <!-- ============ HALAMAN ABSEN FINGERPRINT ============ -->
@@ -113,15 +134,16 @@
       <button class="btn btn-primary" id="absenFingerBtn">Tekan untuk Absen</button>
     </div>
     <button class="btn btn-back" onclick="kembaliKeMenuFinger()">← Kembali</button>
-    <div id="statusAbsenFinger" class="hidden"></div>
+    <div id="statusAbsenFinger" class="status"></div>
   </div>
 
   <script>
-    const BACKEND_URL = "https://script.google.com/macros/s/AKfycbymdSujUhyXlkgQ8JKTI4plFPo_mkKVcQecis5eZKxX4YL7LzYmGZQg4k-wdSAHGKnH/exec";
+    const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzUImuZL8UShcBLM_JW9rxucG-IzxHM0zBCcvki4TFzFmC3EqSibOidmUCLyoPnHIM5/exec";
 
     let qrScanner = null;
-    let cooldownQR = false; // cegah spam kirim QR yang sama
+    let cooldownQR = false;
     let notifTimer = null;
+    let logItems = [];
 
     // ================= NAVIGASI =================
     function sembunyikanSemua() {
@@ -137,22 +159,22 @@
     function kembaliKeMenu() {
       hentikanScanner();
       document.getElementById("notifQR").style.display = "none";
+      logItems = [];
+      document.getElementById("logScan").innerHTML = "";
       tampilkan("menuPage");
     }
-    function kembaliKeMenuFinger() {
-      tampilkan("fingerMenuPage");
-    }
+    function kembaliKeMenuFinger() { tampilkan("fingerMenuPage"); }
 
     function bukaQR() {
       tampilkan("qrPage");
       document.getElementById("notifQR").style.display = "none";
+      logItems = [];
+      document.getElementById("logScan").innerHTML = "";
       cooldownQR = false;
       mulaiScanner();
     }
 
-    function bukaMenuFingerprint() {
-      tampilkan("fingerMenuPage");
-    }
+    function bukaMenuFingerprint() { tampilkan("fingerMenuPage"); }
 
     function bukaDaftarFinger() {
       tampilkan("daftarPage");
@@ -167,7 +189,6 @@
 
     // ================= QR SCANNER =================
     function mulaiScanner() {
-      // Selalu buat instance baru untuk memastikan kamera hidup
       if (qrScanner) {
         try { qrScanner.clear(); } catch(e) {}
         qrScanner = null;
@@ -186,42 +207,51 @@
           const s = qrScanner;
           qrScanner = null;
           s.clear().catch(() => {});
-        } catch(e) {
-          qrScanner = null;
-        }
+        } catch(e) { qrScanner = null; }
       }
     }
 
     function onScanSuccess(decodedText) {
-      if (cooldownQR) return; // masih jeda, abaikan
+      if (cooldownQR) return;
 
       const teks = decodedText.trim();
-
-      // Validasi format
       let tipe = null;
       if (/^\d{10}$/.test(teks)) tipe = "Siswa";
       else if (/^\d{18}$/.test(teks)) tipe = "Guru";
       else {
-        tampilkanNotifQR("❌ QR tidak valid: " + teks + " (harus 10 atau 18 digit)", "err");
+        tampilkanNotifQR("❌ QR tidak valid: " + teks, "err");
+        addLog(teks, "QR tidak valid", "err");
         return;
       }
 
-      // Aktifkan jeda 3 detik agar tidak spam kirim untuk QR yang sama
+      // Cooldown agar tidak spam QR yang sama
       cooldownQR = true;
-      setTimeout(() => { cooldownQR = false; }, 3000);
+      setTimeout(() => { cooldownQR = false; }, 2000);
 
-      // Kirim instan dengan fetch no-cors (tidak menunggu respons)
-      kirimCepat({
-        aksi: "absenQR",
-        identitas: teks,
-        timestamp: new Date().toISOString()
+      // Tampilkan status sementara
+      tampilkanNotifQR("⏳ Mengirim " + tipe + " " + teks + "...", "info");
+
+      // Kirim via JSONP supaya dapat respons asli dari server
+      kirimJSONP("absenQR", { identitas: teks }, function (res) {
+        if (!res) {
+          tampilkanNotifQR("❌ Tidak ada respons server", "err");
+          addLog(teks, "Gagal koneksi", "err");
+          return;
+        }
+
+        if (res.status === "sukses") {
+          tampilkanNotifQR("✅ " + res.pesan, "ok");
+          addLog(teks, "Hadir", "ok");
+          if (navigator.vibrate) navigator.vibrate(100);
+        } else if (res.status === "duplikat") {
+          tampilkanNotifQR("⚠️ " + res.pesan, "warn");
+          addLog(teks, "Sudah absen", "warn");
+          if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        } else {
+          tampilkanNotifQR("❌ " + res.pesan, "err");
+          addLog(teks, "Gagal", "err");
+        }
       });
-
-      // Tampilkan notif sukses seketika
-      tampilkanNotifQR("✅ " + tipe + " " + teks + " terkirim. Kamera siap scan berikutnya.", "ok");
-
-      // Getar sebagai feedback
-      if (navigator.vibrate) navigator.vibrate(100);
     }
 
     function tampilkanNotifQR(pesan, jenis) {
@@ -231,12 +261,25 @@
       el.style.display = "block";
 
       if (notifTimer) clearTimeout(notifTimer);
-      notifTimer = setTimeout(() => {
-        el.style.display = "none";
-      }, 2500);
+      notifTimer = setTimeout(() => { el.style.display = "none"; }, 3000);
     }
 
-    // ================= DAFTAR SIDIK JARI =================
+    function addLog(identitas, status, jenis) {
+      const waktu = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      logItems.unshift({ identitas, status, jenis, waktu });
+      if (logItems.length > 5) logItems.pop();
+
+      const container = document.getElementById("logScan");
+      container.innerHTML = logItems.map(item =>
+        '<div class="log-item ' + item.jenis + '">' +
+          '<span class="id">' + item.identitas + '</span>' +
+          '<span>' + item.status + '</span>' +
+          '<span class="time">' + item.waktu + '</span>' +
+        '</div>'
+      ).join("");
+    }
+
+    // ================= DAFTAR FINGERPRINT =================
     document.getElementById("daftarBtn").addEventListener("click", async () => {
       const identitas = document.getElementById("daftarInput").value.trim();
       const btn = document.getElementById("daftarBtn");
@@ -283,19 +326,26 @@
           }
         });
 
-        // Kirim cepat
-        kirimCepat({
-          aksi: "daftar",
+        tampilkanStatus("statusDaftar", "⏳ Menyimpan...", "info");
+
+        kirimJSONP("daftar", {
           identitas: identitas,
-          credentialId: credential.id,
-          timestamp: new Date().toISOString()
+          credentialId: credential.id
+        }, function (res) {
+          btn.disabled = false;
+          btn.textContent = "Daftarkan Sidik Jari Sekarang";
+
+          if (!res) {
+            tampilkanStatus("statusDaftar", "❌ Tidak ada respons server", "err");
+            return;
+          }
+
+          if (res.status === "sukses") {
+            tampilkanStatus("statusDaftar", "✅ " + res.pesan, "ok");
+          } else {
+            tampilkanStatus("statusDaftar", "❌ " + res.pesan, "err");
+          }
         });
-
-        tampilkanStatus("statusDaftar",
-          "✅ Sidik jari untuk " + identitas + " berhasil didaftarkan di HP ini.", "ok");
-
-        btn.disabled = false;
-        btn.textContent = "Daftarkan Sidik Jari Sekarang";
 
       } catch (err) {
         console.error(err);
@@ -308,7 +358,7 @@
       }
     });
 
-    // ================= ABSEN SIDIK JARI =================
+    // ================= ABSEN FINGERPRINT =================
     document.getElementById("absenFingerBtn").addEventListener("click", async () => {
       const btn = document.getElementById("absenFingerBtn");
       btn.disabled = true;
@@ -336,18 +386,27 @@
           }
         });
 
-        // Kirim cepat
-        kirimCepat({
-          aksi: "absenFinger",
-          credentialId: assertion.id,
-          timestamp: new Date().toISOString()
+        tampilkanStatus("statusAbsenFinger", "⏳ Memverifikasi...", "info");
+
+        kirimJSONP("absenFinger", { credentialId: assertion.id }, function (res) {
+          btn.disabled = false;
+          btn.textContent = "Tekan untuk Absen";
+
+          if (!res) {
+            tampilkanStatus("statusAbsenFinger", "❌ Tidak ada respons server", "err");
+            return;
+          }
+
+          if (res.status === "sukses") {
+            tampilkanStatus("statusAbsenFinger", "✅ " + res.pesan, "ok");
+            if (navigator.vibrate) navigator.vibrate(100);
+          } else if (res.status === "duplikat") {
+            tampilkanStatus("statusAbsenFinger", "⚠️ " + res.pesan, "warn");
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+          } else {
+            tampilkanStatus("statusAbsenFinger", "❌ " + res.pesan, "err");
+          }
         });
-
-        tampilkanStatus("statusAbsenFinger", "✅ Absensi terkirim.", "ok");
-        if (navigator.vibrate) navigator.vibrate(100);
-
-        btn.disabled = false;
-        btn.textContent = "Tekan untuk Absen";
 
       } catch (err) {
         console.error(err);
@@ -359,24 +418,57 @@
       }
     });
 
-    // ================= KIRIM CEPAT (FETCH no-cors) =================
-    // Kirim tanpa tunggu respons supaya terasa instan.
-    // Validasi duplikat & format tetap dijalankan di server.
-    function kirimCepat(payload) {
-      fetch(BACKEND_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(payload)
-      }).catch(err => {
-        console.warn("Gagal kirim:", err);
-      });
+    // ================= KIRIM JSONP =================
+    function kirimJSONP(aksi, data, callback) {
+      const payload = Object.assign({}, data, { aksi: aksi, timestamp: new Date().toISOString() });
+      const cbName = "cb_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+
+      let selesai = false;
+
+      window[cbName] = function (res) {
+        if (selesai) return;
+        selesai = true;
+        delete window[cbName];
+        if (script.parentNode) document.body.removeChild(script);
+        callback(res);
+      };
+
+      const url = BACKEND_URL +
+        "?callback=" + encodeURIComponent(cbName) +
+        "&aksi=" + encodeURIComponent(aksi) +
+        "&data=" + encodeURIComponent(JSON.stringify(payload));
+
+      const script = document.createElement("script");
+      script.src = url;
+
+      // Timeout 12 detik supaya tidak menggantung selamanya
+      const timeout = setTimeout(function () {
+        if (selesai) return;
+        selesai = true;
+        delete window[cbName];
+        if (script.parentNode) document.body.removeChild(script);
+        callback(null);
+      }, 12000);
+
+      script.onerror = function () {
+        if (selesai) return;
+        selesai = true;
+        clearTimeout(timeout);
+        delete window[cbName];
+        if (script.parentNode) document.body.removeChild(script);
+        callback(null);
+      };
+
+      // Simpan clearTimeout supaya dipanggil saat sukses
+      window[cbName + "_timeout"] = timeout;
+
+      document.body.appendChild(script);
     }
 
     function tampilkanStatus(id, pesan, jenis) {
       const el = document.getElementById(id);
       el.innerHTML = pesan;
-      el.className = "status-" + jenis;
+      el.className = "status status-" + jenis;
       el.style.display = "block";
     }
   </script>
